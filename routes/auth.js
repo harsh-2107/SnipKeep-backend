@@ -77,7 +77,7 @@ router.post('/login', credentialRules, async (req, res) => {
 })
 
 // ROUTE 3: Get logged in user details
-router.post('/getuser', fetchuser, async (req, res) => {
+router.post('/get-user', fetchuser, async (req, res) => {
     try {
         const userId = req.user.id;
         const user = await User.findById(userId).select("-password");
