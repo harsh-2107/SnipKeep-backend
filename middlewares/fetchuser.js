@@ -10,7 +10,7 @@ const fetchuser = (req, res, next) => {
     try {
         // Verify if the token is valid
         const data = jwt.verify(token, process.env.JWT_SECRET);
-        req.user = data.user; // What comment to write here?
+        req.user = data.user; // Attach the user ID from token payload to the request object
         next();
     } catch (error) {
         res.status(401).send({ error: "Please authenticate using a valid token" });
