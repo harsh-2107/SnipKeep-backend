@@ -1,5 +1,5 @@
 {
-  "name": "snipnote-backend",
+  "name": "snipkeep-backend",
   "version": "1.0.0",
   "description": "",
   "main": "server.js",
@@ -10,14 +10,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/harsh-2107/SnipNote-backend.git"
+    "url": "git+https://github.com/harsh-2107/SnipKeep-backend.git"
   },
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/harsh-2107/SnipNote-backend/issues"
+    "url": "https://github.com/harsh-2107/SnipKeep-backend/issues"
   },
-  "homepage": "https://github.com/harsh-2107/SnipNote-backend#readme",
+  "homepage": "https://github.com/harsh-2107/SnipKeep-backend#readme",
   "dependencies": {
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
