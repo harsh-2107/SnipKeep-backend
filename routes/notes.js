@@ -52,7 +52,7 @@ router.get("/fetch-notes", fetchuser, async (req, res) => {
         case "deleted":
             query.isDeleted = true;
             break;
-        default:
+        default: 
             // If no specific filter is applied, fetch only regular notes (not pinned, archived, or deleted)
             query.isPinned = false;
             query.isArchived = false;
@@ -69,8 +69,8 @@ router.get("/fetch-notes", fetchuser, async (req, res) => {
             tag: note.tag.map(t => decrypt(t))
         }));
         res.status(200).json(notes);
-    } catch (err) {
-        res.status(500).json({ error: "Internal server error" });
+    } catch (error) {
+        res.status(500).json({ error: "Failed to fetch notes. Please reload the page." });
     }
 })
 
@@ -79,7 +79,7 @@ router.get("/search", fetchuser, async (req, res) => {
     const searchText = req.query.text?.toLowerCase().trim();
     // Return empty array if searchText is empty
     if (!searchText) {
-        res.status(200).json([]);
+        return res.status(200).json([]);
     }
     try {
         let notes = await Note.find({ user: req.user.id, isDeleted: false }).lean().sort({ updatedAt: -1 });
@@ -98,8 +98,8 @@ router.get("/search", fetchuser, async (req, res) => {
             return isTitle || isContent || isTag;
         });
         res.status(200).json(filteredNotes);
-    } catch (err) {
-        res.status(500).json({ error: "Internal server error" });
+    } catch (error) {
+        res.status(500).json({ error: "Failed to search notes. Please reload the page or try again." });
     }
 })
 
@@ -108,25 +108,32 @@ router.post("/add-note", fetchuser, [noteValidationRules, exclusiveNoteRules], a
     // Return bad request and error if the note doesn't satisfy the validation rules
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
+        return res.status(400).json({ error: errors.array() });
     }
     try {
         const { title, content, tag, isPinned, isArchived, isDeleted } = req.body;
         // Encrypt title, content and tag, if present
-        const encryptedTitle = title ? encrypt(title) : '';
-        const encryptedContent = content ? encrypt(content) : '';
+        const encryptedTitle = title ? encrypt(title) : encrypt("");
+        const encryptedContent = content ? encrypt(content) : encrypt("");
         const encryptedTags = Array.isArray(tag) ?
             tag.map(t => encrypt(t)) : typeof (tag) === 'string' ? [encrypt(tag)] : [];
-        const note = await Note.create({
+        let note = await Note.create({
             user: req.user.id,
             title: encryptedTitle,
             content: encryptedContent,
             tag: encryptedTags,
             isPinned, isArchived, isDeleted
         });
+        note = note.toObject();
+        note = {
+            ...note,
+            title: decrypt(note.title),
+            content: decrypt(note.content),
+            tag: note.tag.map(t => decrypt(t))
+        };
         res.status(201).json(note);
-    } catch (err) {
-        res.status(500).json({ error: "Internal server error" });
+    } catch (error) {
+        res.status(500).json({ error: "Failed to add note. Please try again." });
     }
 })
 
@@ -135,7 +142,7 @@ router.put("/update-note/:id", fetchuser, [exclusiveNoteRules], async (req, res)
     // Return bad request and error if the note doesn't satisfy the validation rules
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
+        return res.status(400).json({ error: errors.array() });
     }
     let note = await Note.findById(req.params.id);
     // Return Not Found error if note with the given id doesn't exist
@@ -154,16 +161,23 @@ router.put("/update-note/:id", fetchuser, [exclusiveNoteRules], async (req, res)
                 .filter(([key, value]) => allowedFields.includes(key) && value !== undefined)
         );
         // Encrypt title, content and tag before updating, if present
-        if (updates.title) { updates.title = encrypt(updates.title) }
-        if (updates.content) { updates.content = encrypt(updates.content) }
-        if (updates.tag) {
+        if (updates.title !== undefined) { updates.title = encrypt(updates.title) }
+        if (updates.content !== undefined) { updates.content = encrypt(updates.content) }
+        if (updates.tag !== undefined) {
             const tagsArray = Array.isArray(updates.tag) ? updates.tag : [updates.tag];
             updates.tag = tagsArray.map(t => encrypt(t));
         }
         note = await Note.findByIdAndUpdate(req.params.id, { $set: updates }, { new: true });
+        note = note.toObject();
+        note = {
+            ...note,
+            title: decrypt(note.title),
+            content: decrypt(note.content),
+            tag: note.tag.map(t => decrypt(t))
+        };
         res.status(200).json(note);
-    } catch (err) {
-        res.status(500).json({ error: "Internal server error" });
+    } catch (error) {
+        res.status(500).json({ error: "Failed to update note. Please try again." });
     }
 })
 
@@ -187,9 +201,16 @@ router.put("/toggle-pin/:id", fetchuser, async (req, res) => {
             if (note.isArchived) { updates.isArchived = false; } // Unarchive note if archived
         }
         note = await Note.findByIdAndUpdate(req.params.id, { $set: updates }, { new: true });
+        note = note.toObject();
+        note = {
+            ...note,
+            title: decrypt(note.title),
+            content: decrypt(note.content),
+            tag: note.tag.map(t => decrypt(t))
+        };
         res.status(200).json(note);
-    } catch (err) {
-        res.status(500).json({ error: "Internal server error" });
+    } catch (error) {
+        res.status(500).json({ error: "Failed to pin/unpin note. Please try again." });
     }
 })
 
@@ -213,9 +234,16 @@ router.put("/toggle-archive/:id", fetchuser, async (req, res) => {
             if (note.isPinned) { updates.isPinned = false; } // Unpin note if pinned
         }
         note = await Note.findByIdAndUpdate(req.params.id, { $set: updates }, { new: true });
+        note = note.toObject();
+        note = {
+            ...note,
+            title: decrypt(note.title),
+            content: decrypt(note.content),
+            tag: note.tag.map(t => decrypt(t))
+        };
         res.status(200).json(note);
-    } catch (err) {
-        res.status(500).json({ error: "Internal server error" });
+    } catch (error) {
+        res.status(500).json({ error: "Failed to archive/unarchive note. Please try again." });
     }
 })
 
@@ -240,9 +268,16 @@ router.put("/toggle-delete/:id", fetchuser, async (req, res) => {
             updates.isArchived = false;
         }
         note = await Note.findByIdAndUpdate(req.params.id, { $set: updates }, { new: true });
+        note = note.toObject();
+        note = {
+            ...note,
+            title: decrypt(note.title),
+            content: decrypt(note.content),
+            tag: note.tag.map(t => decrypt(t))
+        };
         res.status(200).json(note);
-    } catch (err) {
-        res.status(500).json({ error: "Internal server error" });
+    } catch (error) {
+        res.status(500).json({ error: "Failed to delete/restore note. Please try again." });
     }
 })
 
@@ -262,10 +297,10 @@ router.delete("/permanent-delete/:id", fetchuser, async (req, res) => {
             note = await Note.findByIdAndDelete(req.params.id);
             res.status(200).json({ message: "Note permanently deleted" });
         } else {
-            res.status(409).json({ error: "Note must be moved to bin (soft deleted) before permanent deletion" });
+            res.status(409).json({ error: "Note must be moved to bin before permanent deletion" });
         }
-    } catch (err) {
-        res.status(500).json({ error: "Internal server error" });
+    } catch (error) {
+        res.status(500).json({ error: "Failed to permanently delete note. Please try again." });
     }
 })
 
