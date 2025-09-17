@@ -18,8 +18,7 @@ export const encryptNote = (noteData) => {
     encrypted.content = noteData.content ? encrypt(noteData.content) : encrypt("");
   }
   if (noteData.tag !== undefined) {
-    const tagsArray = Array.isArray(noteData.tag) ? noteData.tag : [noteData.tag];
-    encrypted.tag = tagsArray.filter(t => t && t.trim()).map(t => encrypt(t));
+    encrypted.tag = noteData.tag?.filter(t => t && t.trim()).map(t => encrypt(t));
   }
   return encrypted;
 };
@@ -55,24 +54,4 @@ export const handleError = (error, res, defaultMessage) => {
   res.status(status).json({
     error: error.message || defaultMessage
   });
-};
-
-// Find all notes in the previous category with order greater than 'noteOrder' and decrease them by 1
-export const reorderPreviousCategoryNotes = async (noteOrder, categoryFilter, session) => {
-  await Note.updateMany({
-    ...categoryFilter,
-    order: { $gt: noteOrder }
-  },
-    { $dec: { order: 1 } },
-    { session, timestamps: false }
-  );
-};
-
-// Find all notes in the new category and increase their order by 1
-export const reorderNewCategoryNotes = async (categoryFilter, session) => {
-  await Note.updateMany(
-    categoryFilter,
-    { $inc: { order: 1 } },
-    { session, timestamps: false }
-  );
 };

@@ -83,7 +83,7 @@ router.post('/login', credentialRules, async (req, res) => {
 router.post('/get-user', fetchuser, async (req, res) => {
     try {
         const userId = req.user.id;
-        const user = await User.findById(userId).select("-password");
+        const user = await User.findById(userId).select("-password").lean();
         res.status(200).json(user);
     } catch (error) {
         res.status(500).json({ error: "Failed to get user details" });

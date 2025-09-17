@@ -1,4 +1,7 @@
 import { body, validationResult } from 'express-validator';
+import mongoose from 'mongoose';
+import { Tag } from "../models/Tag.js";
+import { decrypt } from "../utils/encryption.js";
 
 // CONSTANTS
 const ALLOWED_COLOURS = ["default", "coral", "peach", "sand", "mint", "sage", "fog", "storm", "dusk", "blossom", "clay", "chalk"];
@@ -26,7 +29,7 @@ export const checkNoteOwnership = (note, userId) => {
 
 // Validate note title and content
 export const noteTextValidation = body().custom((value, { req }) => {
-  const { title, content, tag } = req.body;
+  const { title, content } = req.body;
   // Check that at least title or content is provided
   if (!title?.trim() && !content?.trim()) {
     throw new Error("Either title or content is required");
@@ -39,6 +42,22 @@ export const noteTextValidation = body().custom((value, { req }) => {
   if (content && content.length > MAX_CONTENT_LENGTH) {
     throw new Error(`Content cannot exceed ${MAX_CONTENT_LENGTH} characters`);
   }
+  return true;
+});
+
+// Validate tag string
+export const tagStringValidation = body("name")
+  .exists({ checkFalsy: true })
+  .withMessage("Label can't be an empty string")
+  .isString()
+  .withMessage("Label must be a string")
+  .trim()
+  .isLength({ min: 1, max: 10 })
+  .withMessage("Label must be a non empty string with not more than 10 characters");
+
+// Validate 
+export const tagArrayValidation = body().custom(async (value, { req }) => {
+  const { tag } = req.body;
   if (tag !== undefined) {
     if (Array.isArray(tag)) {
       if (tag.length > MAX_TAGS_COUNT) {
@@ -48,21 +67,20 @@ export const noteTextValidation = body().custom((value, { req }) => {
         !t || typeof t !== 'string' || t.trim().length === 0 || t.length > MAX_TAG_LENGTH
       );
       if (invalidTags.length > 0) {
-        throw new Error(`Label must be a non-empty string with maximum ${MAX_TAG_LENGTH} characters`);
+        throw new Error(`Each lebel must be a non-empty string with maximum ${MAX_TAG_LENGTH} characters`);
+      }
+      const globalTagObjs = await Tag.find({ user: req.user.id }).lean();
+      // Extract and decrypt the tag strings from each document
+      const globalTags = globalTagObjs.map(tagObj => decrypt(tagObj.name));
+      // Check if all provided tags exist in the user's global tags
+      for (const t of tag) {
+        if (!globalTags.includes(t.trim())) {
+          throw new Error("Label should be added first before use");
+        }
       }
     } else {
       throw new Error("Invalid tag format");
     }
-  }
-  return true;
-});
-
-// Validation rules for isPinned, isArchived and isDeleted
-export const noteCategoryValidation = body().custom((value, { req }) => {
-  const { isPinned, isArchived, isDeleted } = req.body;
-  const trueCount = [isPinned, isArchived, isDeleted].filter(Boolean).length;
-  if (trueCount > 1) {
-    throw new Error("A note can only be pinned, archived or deleted — not more than one at a time");
   }
   return true;
 });

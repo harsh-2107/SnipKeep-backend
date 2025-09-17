@@ -33,10 +33,6 @@ const noteSchema = new mongoose.Schema({
   colour: {
     type: String,
     required: true,
-  },
-  order: {
-    type: Number,
-    required: true,
   }
 }, {
   timestamps: true
